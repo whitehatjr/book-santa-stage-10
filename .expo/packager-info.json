@@ -1,0 +1,10 @@
+{
+  "devToolsPort": 19002,
+  "expoServerPort": 19000,
+  "packagerPort": 19001,
+  "packagerPid": 3857,
+  "expoServerNgrokUrl": "https://nv-ey3.rajeevtfi.book-santa-stage-7.exp.direct",
+  "packagerNgrokUrl": "https://packager.nv-ey3.rajeevtfi.book-santa-stage-7.exp.direct",
+  "ngrokPid": 4055,
+  "webpackServerPort": null
+}
