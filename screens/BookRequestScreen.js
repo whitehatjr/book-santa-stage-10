@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   StyleSheet,
   TouchableOpacity,
+  ScrollView,
   Alert} from 'react-native';
 import db from '../config';
 import firebase from 'firebase';
@@ -74,14 +75,12 @@ receivedBooks=(bookName)=>{
 
 
 getBookRequest =()=>{
-  console.log("log2");
   db.collection('requested_books')
   .where('user_id','==',this.state.userId)
   .where('book_requested','==',true)
   .get()
   .then(snapshot => {
     snapshot.forEach(doc => {
-      console.log(doc.data());
       this.setState({
         requestedBookName: doc.data().book_name,
         bookStatus: doc.data().book_status,
@@ -93,12 +92,33 @@ getBookRequest =()=>{
   })
 }
 
+
+sendNotification=()=>{
+  db.collection('users').where('email_id','==',this.state.userId).get()
+  .then((snapshot)=>{
+    snapshot.forEach((doc)=>{
+      var name = doc.data().first_name
+      var lastName = doc.data().last_name
+
+      db.collection('all_notifications').where('request_id','==',this.state.requestId).get()
+      .then((snapshot)=>{
+        snapshot.forEach((doc) => {
+          db.collection('all_notifications').doc(doc.id).update({
+            "notification_status" : "unread",
+            "message" : name +" " + lastName + " received the book"
+          })
+        })
+      })
+    })
+  })
+}
+
 componentDidMount(){
   this.getBookRequest()
+
 }
 
 updateBookRequestStatus=()=>{
-  console.log("doc",this.state.docId);
   db.collection('requested_books').doc(this.state.docId)
   .update({
     book_requested: false,
@@ -127,8 +147,11 @@ updateBookRequestStatus=()=>{
           </View>
 
           <TouchableOpacity style={{borderWidth:1,borderColor:'orange',backgroundColor:"orange",width:300,alignSelf:'center',alignItems:'center',height:30,marginTop:30}}
-          onPress={()=>{this.updateBookRequestStatus();
-            this.receivedBooks(this.state.requestedBookName)}}>
+          onPress={()=>{
+            this.sendNotification()
+            this.updateBookRequestStatus();
+            this.receivedBooks(this.state.requestedBookName)
+          }}>
           <Text>I recieved the book </Text>
           </TouchableOpacity>
         </View>
@@ -140,6 +163,8 @@ updateBookRequestStatus=()=>{
     return(
         <View style={{flex:1}}>
           <MyHeader title="Request Book" navigation ={this.props.navigation}/>
+
+          <ScrollView>
             <KeyboardAvoidingView style={styles.keyBoardStyle}>
               <TextInput
                 style ={styles.formTextInput}
@@ -170,7 +195,9 @@ updateBookRequestStatus=()=>{
                 >
                 <Text>Request</Text>
               </TouchableOpacity>
+
             </KeyboardAvoidingView>
+            </ScrollView>
         </View>
     )
   }
