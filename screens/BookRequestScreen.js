@@ -23,7 +23,8 @@ export default class BookRequestScreen extends Component{
       requestedBookName: "",
       bookStatus:"",
       requestId:"",
-      userDocId: ''
+      userDocId: '',
+      docId :''
     }
   }
 
@@ -47,14 +48,21 @@ export default class BookRequestScreen extends Component{
     })
 
     await  this.getBookRequest()
+    db.collection('users').where("email_id","==",userId).get()
+    .then()
+    .then((snapshot)=>{
+      snapshot.forEach((doc)=>{
+        db.collection('users').doc(doc.id).update({
+      IsBookRequestActive: true
+      })
+    })
+  })
 
     this.setState({
         bookName :'',
         reasonToRequest : '',
         requestId: randomRequestId
     })
-
-
 
     return Alert.alert("Book Requested Successfully")
 
@@ -99,39 +107,40 @@ getIsBookRequestActive(){
 
 
 getBookRequest =()=>{
+  // getting the requested book
 var bookRequest=  db.collection('requested_books')
   .where('user_id','==',this.state.userId)
-  .orderBy("date").limit(1).get()
+  .get()
   .then((snapshot)=>{
     snapshot.forEach((doc)=>{
-      console.log(doc.data());
+      if(doc.data().book_status !== "received"){
+        this.setState({
+          requestId : doc.data().request_id,
+          requestedBookName: doc.data().book_name,
+          bookStatus:doc.data().book_status,
+          docId     : doc.id
+        })
+      }
     })
+})}
 
-  })
-      // this.setState({
-      //   requestedBookName: bookRequest.book_name,
-      //   bookStatus: bookRequest.book_status,
-      //   requestId : bookRequest.request_id,
-      // })
-
-}
 
 
 sendNotification=()=>{
-  console.log("in the function");
+  //to get the first name and last name
   db.collection('users').where('email_id','==',this.state.userId).get()
   .then((snapshot)=>{
     snapshot.forEach((doc)=>{
       var name = doc.data().first_name
       var lastName = doc.data().last_name
 
-      console.log(this.state.requestId);
-      db.collection('all_notifications').where('request_id','==',"ree6gn").get()
+      // to get the donor id and book nam
+      db.collection('all_notifications').where('request_id','==',this.state.requestId).get()
       .then((snapshot)=>{
         snapshot.forEach((doc) => {
           var donorId  = doc.data().donor_id
           var bookName =  doc.data().book_name
-          console.log("Here im");
+
           //targert user id is the donor id to send notification to the user
           db.collection('all_notifications').add({
             "targeted_user_id" : donorId,
@@ -152,15 +161,24 @@ componentDidMount(){
 }
 
 updateBookRequestStatus=()=>{
+  //updating the book status after receiving the book
   db.collection('requested_books').doc(this.state.docId)
   .update({
-    book_requested: false,
     book_status : 'recieved'
   })
 
-  this.setState({
-    bookRequested: false
+  //getting the  doc id to update the users doc
+  db.collection('users').where('email_id','==',this.state.userId).get()
+  .then((snapshot)=>{
+    snapshot.forEach((doc) => {
+      //updating the doc
+      db.collection('users').doc(doc.id).update({
+        IsBookRequestActive: false
+      })
+    })
   })
+
+
 }
 
 
@@ -185,7 +203,7 @@ updateBookRequestStatus=()=>{
           <TouchableOpacity style={{borderWidth:1,borderColor:'orange',backgroundColor:"orange",width:300,alignSelf:'center',alignItems:'center',height:30,marginTop:30}}
           onPress={()=>{
             this.sendNotification()
-            // this.updateBookRequestStatus();
+            this.updateBookRequestStatus();
             this.receivedBooks(this.state.requestedBookName)
           }}>
           <Text>I recieved the book </Text>

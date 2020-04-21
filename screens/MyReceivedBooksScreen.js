@@ -16,7 +16,9 @@ export default class MyReceivedBooksScreen extends Component{
   }
 
   getReceivedBooksList =()=>{
-    this.requestRef = db.collection("received_books")
+    this.requestRef = db.collection("requested_books")
+    .where('user_id','==',this.state.userId)
+    .where("book_status", '==','received')
     .onSnapshot((snapshot)=>{
       var receivedBooksList = snapshot.docs.map((doc) => doc.data())
       this.setState({
