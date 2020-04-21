@@ -19,11 +19,11 @@ export default class BookRequestScreen extends Component{
       userId : firebase.auth().currentUser.email,
       bookName:"",
       reasonToRequest:"",
-      bookRequested : "",
+      IsBookRequestActive : "",
       requestedBookName: "",
       bookStatus:"",
       requestId:"",
-      docId: ''
+      userDocId: ''
     }
   }
 
@@ -42,7 +42,8 @@ export default class BookRequestScreen extends Component{
         "reason_to_request":reasonToRequest,
         "request_id"  : randomRequestId,
         "book_status" : "requested",
-        "book_requested" : true
+         "date"       : firebase.firestore.FieldValue.serverTimestamp()
+
     })
 
     await  this.getBookRequest()
@@ -74,38 +75,69 @@ receivedBooks=(bookName)=>{
 
 
 
-getBookRequest =()=>{
-  db.collection('requested_books')
-  .where('user_id','==',this.state.userId)
-  .where('book_requested','==',true)
-  .get()
-  .then(snapshot => {
-    snapshot.forEach(doc => {
+
+getIsBookRequestActive(){
+  db.collection('users')
+  .where('email_id','==',this.state.userId)
+  .onSnapshot(querySnapshot => {
+    querySnapshot.forEach(doc => {
       this.setState({
-        requestedBookName: doc.data().book_name,
-        bookStatus: doc.data().book_status,
-        bookRequested: doc.data().book_requested,
-        requestId : doc.data().request_id,
-        docId : doc.id
+        IsBookRequestActive:doc.data().IsBookRequestActive,
+        userDocId : doc.id
       })
-    });
+    })
   })
 }
 
 
+
+
+
+
+
+
+
+
+getBookRequest =()=>{
+var bookRequest=  db.collection('requested_books')
+  .where('user_id','==',this.state.userId)
+  .orderBy("date").limit(1).get()
+  .then((snapshot)=>{
+    snapshot.forEach((doc)=>{
+      console.log(doc.data());
+    })
+
+  })
+      // this.setState({
+      //   requestedBookName: bookRequest.book_name,
+      //   bookStatus: bookRequest.book_status,
+      //   requestId : bookRequest.request_id,
+      // })
+
+}
+
+
 sendNotification=()=>{
+  console.log("in the function");
   db.collection('users').where('email_id','==',this.state.userId).get()
   .then((snapshot)=>{
     snapshot.forEach((doc)=>{
       var name = doc.data().first_name
       var lastName = doc.data().last_name
 
-      db.collection('all_notifications').where('request_id','==',this.state.requestId).get()
+      console.log(this.state.requestId);
+      db.collection('all_notifications').where('request_id','==',"ree6gn").get()
       .then((snapshot)=>{
         snapshot.forEach((doc) => {
-          db.collection('all_notifications').doc(doc.id).update({
+          var donorId  = doc.data().donor_id
+          var bookName =  doc.data().book_name
+          console.log("Here im");
+          //targert user id is the donor id to send notification to the user
+          db.collection('all_notifications').add({
+            "targeted_user_id" : donorId,
+            "message" : name +" " + lastName + " received the book " + bookName ,
             "notification_status" : "unread",
-            "message" : name +" " + lastName + " received the book"
+            "book_name" : bookName
           })
         })
       })
@@ -115,6 +147,7 @@ sendNotification=()=>{
 
 componentDidMount(){
   this.getBookRequest()
+  this.getIsBookRequestActive()
 
 }
 
@@ -133,8 +166,11 @@ updateBookRequestStatus=()=>{
 
   render(){
 
-    if(this.state.bookRequested === true){
+    if(this.state.IsBookRequestActive === true){
       return(
+
+        // Status screen
+
         <View style = {{flex:1,justifyContent:'center'}}>
           <View style={{borderColor:"orange",borderWidth:2,justifyContent:'center',alignItems:'center',padding:10,margin:10}}>
           <Text>Book Name</Text>
@@ -149,7 +185,7 @@ updateBookRequestStatus=()=>{
           <TouchableOpacity style={{borderWidth:1,borderColor:'orange',backgroundColor:"orange",width:300,alignSelf:'center',alignItems:'center',height:30,marginTop:30}}
           onPress={()=>{
             this.sendNotification()
-            this.updateBookRequestStatus();
+            // this.updateBookRequestStatus();
             this.receivedBooks(this.state.requestedBookName)
           }}>
           <Text>I recieved the book </Text>
@@ -159,8 +195,8 @@ updateBookRequestStatus=()=>{
     }
     else
     {
-      console.log("in else",this.state.bookStatus);
     return(
+      // Form screen
         <View style={{flex:1}}>
           <MyHeader title="Request Book" navigation ={this.props.navigation}/>
 
